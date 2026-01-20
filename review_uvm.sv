@@ -28,7 +28,7 @@ Version			:	1.0
 
 // Extend write_xtn from uvm_sequence_item
 class write_xtn extends uvm_sequence_item;
-  
+	
 	// UVM Factory Registration Macro
 	`uvm_object_utils(write_xtn)
 
@@ -260,7 +260,8 @@ endclass:write_xtn
 	function write_xtn :: new (string name = "write_xtn");
 		super.new(name);
 	endfunction
-	  
+
+	
 // In post_andomize method assign address to 6000 if xtn_type is BAD_XTN
 function void write_xtn :: post_randomize();
  if(xtn_type == BAD_XTN)
