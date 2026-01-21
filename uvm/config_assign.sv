@@ -23,9 +23,9 @@ Version			:	1.0
 
 
 
-module top;
+module top; //Simulation always starts from a module, not a class
   
-
+//Packages organize large codebases
 	// import ram_test_pkg
    
 	import ram_test_pkg::*;
@@ -34,9 +34,14 @@ module top;
 	import uvm_pkg::*; 
 
 	// include the uvm_macros.svh
-	`include "uvm_macros.svh"
-
-
+	//Learning: Macros simplify factory & reporting
+//Future: Used everywhere in UVM
+	`include "uvm_macros.svh" //Needed for uvm_component_utils, uvm_info, etc.
+/*
+What: Starts UVM and runs a specific test
+Why: Tells UVM which test to execute
+Learning: Test selection is dynamic
+Future: Regression control, command-line overrides */
  
   // Within initial block 
      // Call run_test("ram_random_test")
@@ -105,40 +110,46 @@ Version			:	1.0
 //------------------------------------------
 
 
-// Extend ram_env from uvm_env
-class ram_env extends uvm_env;
-
+// Extend ram_env from uvm_env // groups agents // hierarchy orgination // future multiple agent systems
+class ram_env extends uvm_env; //Defines an environment class that extends uvm_env.
+//uvm_env is the standard UVM class for grouping components//Environment represents a verification subsystem
    // Factory Registration
+	//Difference between: uvm_test → control
+		//				uvm_env → structure
 	`uvm_component_utils(ram_env)
 
 	// Declare the ram_wr_agt_top handle
  	
-	ram_wr_agt_top agt_top_h;
+	ram_wr_agt_top agt_top_h; // handels to agent top //env owns agent structure 
         int no_of_agents = 3;
 	//------------------------------------------
 	// METHODS
 	//------------------------------------------
 
 	// Standard UVM Methods:
-	extern function new(string name = "ram_env",uvm_component parent);
-	extern function void build_phase(uvm_phase phase);
-	
+	extern function new(string name = "ram_env",uvm_component parent);//Declares the constructor prototype.
+		extern function void build_phase(uvm_phase phase);//All child components must be created here ////Declares the build phase method
+	//build_phase = structure creation phase
 
 endclass
 	
 //-----------------  constructor new method  -------------------//
-function ram_env::new(string name="ram_env",uvm_component parent);
+			function ram_env::new(string name="ram_env",uvm_component parent);//Defines the constructor for the environment.
 	super.new(name,parent);
 endfunction
 
          
 
  //-----------------  Add UVM build() phase   -------------------//
-function void ram_env::build_phase(uvm_phase phase);	
+			function void ram_env::build_phase(uvm_phase phase);	//Defines what the environment builds.
 	super.build_phase(phase);
         uvm_config_db #(int)::set(this,"agt_top_h","CONFIG",no_of_agents);
 	// Create the instance of ram_wr_agt_top in the build phase
 	agt_top_h = ram_wr_agt_top::type_id::create("agt_top_h",this);
+	/*What: Creates agent top
+Why: Env builds structure
+Learning: Structural responsibility
+Future: Complex environments*/
 endfunction
    
 
@@ -183,7 +194,6 @@ package ram_test_pkg;
 	
 
 	`include "uvm_macros.svh"
-
 	`include "tb_defs.sv"
 	`include "write_xtn.sv"
 	`include "ram_wr_driver.sv"
@@ -221,45 +231,61 @@ Version			:	1.0
 //------------------------------------------
 // CLASS DESCRIPTION
 //------------------------------------------
-
+//test is boss of TB
 // Extend ram_base_test from uvm_test;
-class ram_base_test extends uvm_test;
+		//Defines a class named ram_base_test that inherits from uvm_test.
+class ram_base_test extends uvm_test; // defines a uvm test Why: All UVM tests must extend uvm_test
 
-   // Factory Registration
-	`uvm_component_utils(ram_base_test)
-
+   // Factory Registration //Registers ram_base_test with the UVM factory.
+	`uvm_component_utils(ram_base_test) //without this we cannt create
+/*What: Registers test with factory
+Why: Factory can create it dynamically
+Learning: Factory pattern
+Future: Overrides, reuse, polymorphism */
   
-    // Declare the ram_env handle
-	ram_env env;   
+    // Declare the ram_env handle //Parent → child ownership
+	ram_env env;   //Future: Scoreboards, virtual sequences
 	//Declare a variable no_of agents of int data type & initialize it to 3
-	int no_of_agents = 3;    
+	int no_of_agents = 3; //Declares and initializes the number of agents.    
 	//------------------------------------------
 	// METHODS
 	//------------------------------------------
 
 	// Standard UVM Methods:
-	extern function new(string name = "ram_base_test" , uvm_component parent);
-	extern function void build_phase(uvm_phase phase);
+	extern function new(string name = "ram_base_test" , uvm_component parent); //Declares the constructor prototype.
+		extern function void build_phase(uvm_phase phase);//Declares the build phase method.
 	
  endclass
 //-----------------  constructor new method  -------------------//
 // Define Constructor new() function
 function ram_base_test::new(string name = "ram_base_test" , uvm_component parent);
-	super.new(name,parent);
+	super.new(name,parent); //Calls the parent (uvm_test) constructor.
 endfunction
 
 //-----------------  build() phase method  -------------------//
             
-function void ram_base_test::build_phase(uvm_phase phase);
+function void ram_base_test::build_phase(uvm_phase phase);//Defines build phase behavior.
    
     // set the no_of_agents into UVM config DB  "int" 
-	uvm_config_db#(int)::set(this,"env.agt_top_h","CONFIG",no_of_agents);
-
+	uvm_config_db#(int)::set(this,"env.agt_top_h","CONFIG",no_of_agents);//Stores no_of_agents into the configuration database.
     super.build_phase(phase);
-	// create the instance for env
+	/*Why it is written BEFORE env creation
+Lower components will call get()
+Value must already exist
+What you are learning
+👉 Top-down configuration flow 
+future usage
+Virtual interface passing
+Mode selection
+Timeouts, sizes*/
+	// Creates the environment using the factory.
 	env = ram_env::type_id::create("env",this);
 endfunction
-
+/*What: Creates environment
+Why: Structure creation happens here
+Learning: Factory creation
+Future: Component replacement*/
+		
 /************************************************************************
   
 Copyright 2019 - Maven Silicon Softech Pvt Ltd.  
@@ -454,10 +480,10 @@ Version			:	1.0
 //------------------------------------------
 // CLASS DESCRIPTION
 //------------------------------------------
-
+/*ram_wr_agt_top reads configuration from the test and creates multiple agents dynamically, then configures each agent as ACTIVE or PASSIVE.*/
    // Extend ram_wr_agt_top from uvm_env;
 class ram_wr_agt_top extends uvm_env;
-
+//It is a container, not a driver/agent itself group of multiple agents
    // Factory Registration
 	`uvm_component_utils(ram_wr_agt_top)
 	// Declare a variable no_of_agents of int data type to get the configuration
@@ -468,10 +494,10 @@ class ram_wr_agt_top extends uvm_env;
 // METHODS
 //------------------------------------------
 
-// Standard UVM Methods:
+// Standard UVM Methods://Declares constructor prototype.//Clean separation of declaration and definition
 	extern function new(string name = "ram_wr_agt_top" , uvm_component parent);
-	extern function void build_phase(uvm_phase phase);
-	extern task run_phase(uvm_phase phase);
+		extern function void build_phase(uvm_phase phase);//Declares build phase method.//Agents must be created during build//👉 Build phase = hierarchy + configuration
+			extern task run_phase(uvm_phase phase); //Declares run phase task.
 endclass
 //-----------------  constructor new method  -------------------//
    // Define Constructor new() function
@@ -492,7 +518,20 @@ endclass
 		foreach(agnth[i])
 		       agnth[i]=ram_wr_agent::type_id::create($sformatf("agnth[%0d]",i),this);
 		//set first two agents as active & third agent as passive in to config data base "bit"
-		
+		/*What this does
+
+Creates each agent dynamically
+
+Names each agent uniquely
+
+Why $sformatf
+
+UVM hierarchy paths must be unique
+
+Needed for config paths
+
+Learning
+👉 Factory + hierarchical naming*/
 		for(int i=0;i<2;i++)
 		uvm_config_db#(bit)::set(this,$sformatf("agnth[%0d]",i),"bit",1);
 		
@@ -536,33 +575,33 @@ Version			:	1.0
 
 // Extend ram_wr_agent from uvm_agent
 class ram_wr_agent extends uvm_agent;
-
+//groups driver, sequencer, monitor //supports ACTIVE / PASSIVE behavior
    // Factory Registration
 	`uvm_component_utils(ram_wr_agent)
 
  
-        
+        //An agent owns these components.👉 Agent = container for protocol components
    // Declare handles of ram_wr_monitor,ram_wr_sequencer and ram_wr_driver
 	ram_wr_monitor monh;
 	ram_wr_sequencer seqrh;
 	ram_wr_driver drvh;
 	
 	//Declare a variable is_active of bit data type to get the configuration
-	    bit is_active;
+	bit is_active; //drives transactions (ACTIVE) or only monitors (PASSIVE)
 	//------------------------------------------
 	// METHODS
 	//------------------------------------------
 
 	// Standard UVM Methods :
-	extern function new(string name = "ram_wr_agent", uvm_component parent = null);
-	extern function void build_phase(uvm_phase phase);
-	extern function void connect_phase(uvm_phase phase);
+	extern function new(string name = "ram_wr_agent", uvm_component parent = null);//👉 Separation of declaration and definition
+		extern function void build_phase(uvm_phase phase);//👉 build_phase = structure + config
+		extern function void connect_phase(uvm_phase phase);//TLM connections must be made here  //👉 UVM phases have specific responsibilities
 
 endclass : ram_wr_agent
 //-----------------  constructor new method  -------------------//
 
 function ram_wr_agent::new(string name = "ram_wr_agent", uvm_component parent = null);
-	super.new(name,parent);
+	super.new(name,parent);//👉 Missing super.new() breaks UVM//Initializes UVM internals and hierarchy.
 endfunction
      
   
@@ -572,16 +611,17 @@ endfunction
 function void ram_wr_agent::build_phase(uvm_phase phase);
 	// Call parent build phase
 	super.build_phase(phase);
-   // get the config object using uvm_config_db bit
-    if(!uvm_config_db#(bit)::get(this,"","bit",is_active))
+   // get the config object using uvm_config_db bit //Configuration must be read before creating components
+	if(!uvm_config_db#(bit)::get(this,"","bit",is_active)) //Reads is_active value set by agent top.
   //    `uvm_fatal("CFG","is_active not found in config DB")
       `uvm_fatal(get_type_name(),"is_active getting failed in agt cls")	
 	// Create ram_wr_monitor instance	
-	monh=ram_wr_monitor::type_id::create("monh",this);
+		monh=ram_wr_monitor::type_id::create("monh",this);//Creates monitor unconditionally.//Both ACTIVE and PASSIVE agents must observe DUT
 	// If config parameter is_active ==1 
 	// Create instance of driver and sequencer
-if(is_active==1)
+	if(is_active==1)//Checks whether agent should drive stimulus.//Passive agents must not drive DUT signals.
 begin
+	//Create driver and sequencer only for ACTIVE agents.
 drvh =ram_wr_driver::type_id::create("drvh",this);
 seqrh = ram_wr_sequencer::type_id::create("seqrh",this);
 end
@@ -594,9 +634,10 @@ endfunction
 //If config parameter is_active==1, 
 //connect driver(TLM seq_item_port) and sequencer(TLM seq_item_export)
 
-function void ram_wr_agent::connect_phase(uvm_phase phase);
+			function void ram_wr_agent::connect_phase(uvm_phase phase);//Defines connect phase.
 if (is_active==1)
-drvh.seq_item_port.connect(seqrh.seq_item_export);	
+	//sequencer → driver using TLM ports
+	drvh.seq_item_port.connect(seqrh.seq_item_export);	//👉 TLM connections are conditional on structure
 endfunction
    
 
@@ -630,11 +671,19 @@ Version:	1.0
 //------------------------------------------
 // CLASS DESCRIPTION
 //------------------------------------------
-
+//The driver executes transactions on the DUT interface.
+//It converts transaction-level data → signal-level activity.
 
 // Extend ram_wr_driver from uvm driver parameterized by write_xtn
-class ram_wr_driver extends uvm_driver #(write_xtn);
+			class ram_wr_driver extends uvm_driver #(write_xtn); //Defines a driver parameterized with write_xtn.
+/*Why parameterized
 
+Ensures type safety
+
+Driver knows exactly which transaction it drives
+
+What you are learning
+👉 Parameterized classes in UVM*/
    // Factory Registration
 
 	`uvm_component_utils(ram_wr_driver)
@@ -653,17 +702,18 @@ endclass
 
 //-----------------  constructor new method  -------------------//
 // Define Constructor new() function
-function ram_wr_driver::new(string name ="ram_wr_driver",uvm_component parent);
-	super.new(name,parent);
+		function ram_wr_driver::new(string name ="ram_wr_driver",uvm_component parent);//Required for all UVM components
+			super.new(name,parent);//Registers component in UVM hierarchy
 endfunction
 
 
 //-----------------  run() phase method  -------------------//
 
 
-task ram_wr_driver::run_phase(uvm_phase phase);
-   `uvm_info(get_type_name(), "This is Driver run phase", UVM_MEDIUM)
-endtask
+		task ram_wr_driver::run_phase(uvm_phase phase);//Defines runtime behavior of driver//👉 run_phase = time-consuming behavior
+			`uvm_info(get_type_name(), "This is Driver run phase", UVM_MEDIUM)//Prints message when driver runs
+//Confirms driver is alive // debug aid 
+		endtask
 
 
 
@@ -695,7 +745,7 @@ Version			:	1.0
 //------------------------------------------
 // CLASS DESCRIPTION
 //------------------------------------------
-
+//Transaction represents one abstract operation on the DUT.
 // Extend ram_wr_monitor from uvm_monitor
 
 class ram_wr_monitor extends uvm_monitor;
@@ -749,13 +799,19 @@ Version			:	1.0
 // CLASS DESCRIPTION
 //------------------------------------------
 
-
+//Sequencer controls when and which transaction is sent to the driver.
 // Extend ram_wr_sequencer from uvm_sequencer parameterized by write_xtn
 class ram_wr_sequencer extends uvm_sequencer #(write_xtn);
 
 	// Factory registration using `uvm_component_utils
 	`uvm_component_utils(ram_wr_sequencer)
+/*What you learn from this file
 
+Sequencer is passive by itself
+
+Works only when connected to driver
+
+Will be controlled later by sequences*/
 	//------------------------------------------
 	// METHODS
 	//------------------------------------------
@@ -770,6 +826,24 @@ function ram_wr_sequencer::new(string name="ram_wr_sequencer",uvm_component pare
 endfunction
 
 
+
+
+
+top
+ ↓
+ram_base_test        → decides intent
+ ↓
+ram_env              → structural container
+ ↓
+ram_wr_agt_top       → creates agents + config
+ ↓
+ram_wr_agent         → behavior decision
+ ↓
+driver / sequencer / monitor
+ ↓
+write_xtn            → data
+
+//outputs 
       (Specify +UVM_NO_RELNOTES to turn off this notice)
 
 UVM_INFO @ 0: reporter [RNTST] Running test ram_base_test...
@@ -797,6 +871,7 @@ uvm_test_top                 ram_base_test           -     @456
           lock_queue         array                   0     -
           num_last_reqs      integral                32    'd1
           num_last_rsps      integral                32    'd1
+	
       agnth[1]               ram_wr_agent            -     @495
         drvh                 ram_wr_driver           -     @697
           rsp_port           uvm_analysis_port       -     @714
@@ -809,6 +884,7 @@ uvm_test_top                 ram_base_test           -     @456
           lock_queue         array                   0     -
           num_last_reqs      integral                32    'd1
           num_last_rsps      integral                32    'd1
+	
       agnth[2]               ram_wr_agent            -     @503
         monh                 ram_wr_monitor          -     @856
 ----------------------------------------------------------------
